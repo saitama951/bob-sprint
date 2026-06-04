@@ -1,0 +1,58 @@
+#!/bin/bash
+
+# Git Post-Commit Hook
+# Automatically processes commits and updates GitHub issues
+
+# Get the automation script directory
+SCRIPT_DIR="$HOME/Desktop/bob-sprint-automation"
+
+# Check if the automation directory exists
+if [ ! -d "$SCRIPT_DIR" ]; then
+    echo "⚠️  Bob Sprint Automation not found at $SCRIPT_DIR"
+    exit 0
+fi
+
+# Get commit information
+COMMIT_SHA=$(git rev-parse HEAD)
+COMMIT_MSG=$(git log -1 --pretty=%B)
+COMMIT_AUTHOR=$(git log -1 --pretty=%an)
+COMMIT_DATE=$(git log -1 --pretty=%ci)
+
+# Get changed files
+FILES=$(git diff-tree --no-commit-id --name-status -r $COMMIT_SHA)
+
+# Get diff (limited to avoid huge outputs)
+DIFF=$(git show --pretty="" --unified=3 $COMMIT_SHA | head -n 100)
+
+echo ""
+echo "🤖 Bob Sprint Automation"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+# Check if commit message contains issue and status parameters
+if ! echo "$COMMIT_MSG" | grep -qi "issue:"; then
+    echo "⏭️  No 'issue:' parameter found - skipping automation"
+    exit 0
+fi
+
+if ! echo "$COMMIT_MSG" | grep -qi "status:"; then
+    echo "⏭️  No 'status:' parameter found - skipping automation"
+    exit 0
+fi
+
+# Run the processor in the background to avoid blocking the commit
+(
+    cd "$SCRIPT_DIR"
+    node scripts/process-commit.js \
+        --sha "$COMMIT_SHA" \
+        --message "$COMMIT_MSG" \
+        --author "$COMMIT_AUTHOR" \
+        --date "$COMMIT_DATE" \
+        --files "$FILES" \
+        --diff "$DIFF" 2>&1
+) &
+
+echo "✓ Automation triggered in background"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+exit 0

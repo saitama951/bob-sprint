@@ -1,0 +1,86 @@
+#!/bin/bash
+
+# Git Post-Push Hook
+# Automatically processes commits after they are pushed to remote
+
+# Get the automation script directory
+SCRIPT_DIR="$HOME/Desktop/bob-sprint-automation"
+
+# Check if the automation directory exists
+if [ ! -d "$SCRIPT_DIR" ]; then
+    echo "⚠️  Bob Sprint Automation not found at $SCRIPT_DIR"
+    exit 0
+fi
+
+echo ""
+echo "🤖 Bob Sprint Automation"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+# Read the push information from stdin
+# Format: <local-ref> <local-sha> <remote-ref> <remote-sha>
+while read local_ref local_sha remote_ref remote_sha
+do
+    # Skip if deleting a branch
+    if [ "$local_sha" = "0000000000000000000000000000000000000000" ]; then
+        continue
+    fi
+
+    # Get the branch name
+    BRANCH=$(echo $remote_ref | sed 's/refs\/heads\///')
+    
+    echo "📤 Processing pushed commits to branch: $BRANCH"
+
+    # Get all commits that were pushed
+    # If remote_sha is all zeros, this is a new branch
+    if [ "$remote_sha" = "0000000000000000000000000000000000000000" ]; then
+        # New branch - get all commits
+        COMMITS=$(git rev-list $local_sha)
+    else
+        # Existing branch - get commits between old and new
+        COMMITS=$(git rev-list $remote_sha..$local_sha)
+    fi
+
+    # Process each commit
+    for COMMIT_SHA in $COMMITS
+    do
+        COMMIT_MSG=$(git log -1 --pretty=%B $COMMIT_SHA)
+        
+        # Check if commit message contains issue and status parameters
+        if ! echo "$COMMIT_MSG" | grep -qi "issue:"; then
+            continue
+        fi
+
+        if ! echo "$COMMIT_MSG" | grep -qi "status:"; then
+            continue
+        fi
+
+        echo "  ✓ Found automation parameters in commit ${COMMIT_SHA:0:7}"
+
+        # Get commit details
+        COMMIT_DATE=$(git log -1 --pretty=%ci $COMMIT_SHA)
+        
+        # Get changed files
+        FILES=$(git diff-tree --no-commit-id --name-status -r $COMMIT_SHA)
+        
+        # Get diff (limited to avoid huge outputs)
+        DIFF=$(git show --pretty="" --unified=3 $COMMIT_SHA | head -n 100)
+
+        # Run the processor in the background
+        (
+            cd "$SCRIPT_DIR"
+            node scripts/process-commit.js \
+                --sha "$COMMIT_SHA" \
+                --message "$COMMIT_MSG" \
+                --date "$COMMIT_DATE" \
+                --files "$FILES" \
+                --diff "$DIFF" \
+                --branch "$BRANCH" 2>&1
+        ) &
+    done
+done
+
+echo "✓ Automation triggered for pushed commits"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+exit 0

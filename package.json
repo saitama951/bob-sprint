@@ -1,0 +1,21 @@
+{
+  "name": "bob-sprint-automation",
+  "version": "1.0.0",
+  "description": "Automated sprint board updates based on commit messages",
+  "main": "scripts/process-commit.js",
+  "scripts": {
+    "install-hook": "node scripts/install-hook.js",
+    "test": "node scripts/test-parser.js"
+  },
+  "keywords": ["git", "automation", "github", "sprint", "project-management"],
+  "author": "Bob",
+  "license": "MIT",
+  "dependencies": {
+    "@octokit/rest": "^20.0.2",
+    "dotenv": "^16.3.1",
+    "js-yaml": "^4.1.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

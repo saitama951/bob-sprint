@@ -1,0 +1,43 @@
+# Bob Sprint Automation Configuration
+
+github:
+  # GitHub Personal Access Token (set in .env file as GITHUB_TOKEN)
+  owner: "saitama951"
+  repo: "runtime"
+  project_number: 1  # Your GitHub Project number
+
+automation:
+  # Status keywords mapping
+  status_keywords:
+    in_progress:
+      - "in-progress"
+      - "ongoing"
+      - "wip"
+      - "working"
+      - "progress"
+    done:
+      - "done"
+      - "completed"
+      - "finished"
+      - "resolved"
+      - "fixed"
+      - "complete"
+  
+  # Comment settings
+  comment:
+    include_diff: true
+    max_diff_lines: 50
+    include_files_changed: true
+  
+  # GitHub Projects settings
+  projects:
+    done_status: "Done"  # Status field value for completed items
+    close_issue_on_done: true  # Close issue when status is done
+
+# Logging
+logging:
+  enabled: true
+  level: "info"  # debug, info, warn, error
+  file: "logs/automation.log"
+
+# Made with Bob
