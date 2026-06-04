@@ -13,6 +13,7 @@ require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 const CommitParser = require('./parser');
 const GitHubClient = require('./github-client');
 const PatchExplainer = require('./patch-explainer');
+const BobAIExplainer = require('./bob-ai-explainer');
 
 class CommitProcessor {
   constructor() {
@@ -46,6 +47,7 @@ class CommitProcessor {
       this.config
     );
     this.explainer = new PatchExplainer(this.config);
+    this.bobAI = new BobAIExplainer(this.config);
   }
 
   /**
@@ -84,15 +86,24 @@ class CommitProcessor {
       timeStyle: 'short'
     })}\n\n`;
 
-    // Add AI-powered patch explanation
+    // Add AI-powered patch explanation using Bob CLI
     if (commitData.diff && commitData.files && commitData.files.length > 0) {
       console.log('🤖 Generating AI explanation of the patch...');
-      const explanation = this.explainer.explainPatch(
-        commitData.diff,
-        commitData.files,
-        params.description
-      );
-      summary += explanation + '\n\n';
+      
+      try {
+        // Try Bob AI - will throw if it fails
+        const explanation = await this.bobAI.explainWithBob(
+          commitData.diff,
+          commitData.files,
+          params.description
+        );
+        
+        summary += explanation + '\n\n';
+      } catch (error) {
+        console.error('❌ Bob AI failed:', error.message);
+        console.log('⚠️  Skipping AI explanation, posting basic comment');
+        // Continue without AI explanation rather than failing completely
+      }
     }
 
     // Add files changed if available
